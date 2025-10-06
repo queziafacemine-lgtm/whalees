@@ -84,20 +84,18 @@ router.get('/sessions/:sessionName/qr', async (req, res) => {
 // Listar sessões disponíveis para agendamento
 router.get('/sessions', async (req, res) => {
   try {
-    const sessions = whatsappService.getAllSessions();
-    const dbSessions = await database.all('SELECT name, status FROM sessions');
-    
-    // Combinar e filtrar apenas sessões conectadas
-    const availableSessions = dbSessions.map(dbSession => {
-      const liveSession = sessions.find(s => s.name === dbSession.name);
-      const status = liveSession ? liveSession.status : dbSession.status;
-      
-      return {
-        name: dbSession.name,
-        status: status,
-        available: status === 'connected'
-      };
-    });
+    const sessions = await whatsappService.getAllSessions();
+
+    if (!Array.isArray(sessions)) {
+      console.error('getAllSessions não retornou um array:', sessions);
+      return res.json({ sessions: [] });
+    }
+
+    const availableSessions = sessions.map(session => ({
+      name: session.name,
+      status: session.status,
+      available: session.status === 'connected'
+    }));
 
     res.json({ sessions: availableSessions });
   } catch (error) {

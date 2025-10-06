@@ -66,6 +66,17 @@ class Database {
       )
     `);
 
+    // Tabela de templates de variáveis
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS templates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        variables TEXT NOT NULL, -- JSON string: [{"key": "cidade", "values": ["joinville", "blumenau"]}]
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Tabela de agendamentos
     this.db.run(`
       CREATE TABLE IF NOT EXISTS schedules (

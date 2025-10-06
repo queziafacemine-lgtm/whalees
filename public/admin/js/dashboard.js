@@ -52,6 +52,7 @@ async function loadSection(section) {
     sessions: 'Sessões WhatsApp',
     scheduler: 'Agendador de Mensagens',
     schedules: 'Agendamentos',
+    templates: 'Templates de Variáveis',
     logs: 'Logs e Histórico',
     settings: 'Configurações'
   };
@@ -73,6 +74,9 @@ async function loadSection(section) {
         break;
       case 'schedules':
         await loadSchedules();
+        break;
+      case 'templates':
+        await loadTemplates();
         break;
       case 'logs':
         await loadLogs();
@@ -371,15 +375,18 @@ async function loadScheduler() {
     showLoading(true);
     
     // Carregar dados necessários
-    const [sessionsRes, categoriesRes] = await Promise.all([
+    const [sessionsRes, categoriesRes, templatesRes] = await Promise.all([
       fetch('/api/sessions'),
-      fetch('/api/mensagens')
+      fetch('/api/mensagens'),
+      fetch('/api/templates')
     ]);
-    
+
     const sessionsData = await sessionsRes.json();
     const categories = await categoriesRes.json();
-    
+    const templatesData = await templatesRes.json();
+
     const sessions = sessionsData.sessions || [];
+    const templates = templatesData.templates || [];
     
     container.innerHTML = `
       <div class="row">
@@ -431,13 +438,13 @@ async function loadScheduler() {
                     </select>
                   </div>
                   <div class="col-md-4">
-                    <label for="scheduler-category" class="form-label fw-semibold">
-                      <i class="bi bi-tags me-1"></i>
-                      Categoria da mensagem
+                    <label for="scheduler-template" class="form-label fw-semibold">
+                      <i class="bi bi-file-text me-1"></i>
+                      Template de Variáveis
                     </label>
-                    <select id="scheduler-category" name="category" class="form-select">
-                      <option value="">Nenhuma (mensagem personalizada)</option>
-                      ${categories.map(cat => `<option value="${cat}">${cat}</option>`).join('')}
+                    <select id="scheduler-template" name="template" class="form-select">
+                      <option value="">Nenhum template</option>
+                      ${templates.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
                     </select>
                   </div>
                   <div class="col-md-4" id="scheduler-datetime-container">
@@ -520,8 +527,13 @@ async function loadScheduler() {
                 <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Use números com DDD (55 + DDD + número)</li>
                 <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Teste mensagens antes de agendar</li>
                 <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Verifique se a sessão está conectada</li>
-                <li><i class="bi bi-check-circle text-success me-2"></i>Use variáveis: {data}, {hora}, {dia_semana}</li>
+                <li><i class="bi bi-check-circle text-success me-2"></i>Use variáveis: {{data}}, {{hora}}, {{dia_semana}}</li>
               </ul>
+              <div id="template-variables-info" style="display: none;">
+                <hr>
+                <h6 class="small fw-bold mb-2">Variáveis do Template:</h6>
+                <div id="template-variables-list"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -602,24 +614,35 @@ function setupSchedulerEventListeners() {
     });
   }
   
-  // Mudança de categoria - carregar mensagem
-  const categorySelect = document.getElementById('scheduler-category');
-  if (categorySelect && messageTextarea) {
-    categorySelect.addEventListener('change', async function() {
-      if (this.value) {
+  // Mudança de template - mostrar variáveis
+  const templateSelect = document.getElementById('scheduler-template');
+  if (templateSelect) {
+    templateSelect.addEventListener('change', async function() {
+      const templateId = this.value;
+      const variablesInfo = document.getElementById('template-variables-info');
+      const variablesList = document.getElementById('template-variables-list');
+
+      if (templateId) {
         try {
-          const response = await fetch(`/api/mensagens/${this.value}`);
+          const response = await fetch(`/api/templates/${templateId}`);
           const data = await response.json();
-          if (data.mensagem) {
-            messageTextarea.value = data.mensagem;
-            messageTextarea.dispatchEvent(new Event('input'));
+
+          if (data.template && data.template.variables) {
+            variablesInfo.style.display = 'block';
+            variablesList.innerHTML = data.template.variables.map(v => `
+              <div class="mb-2">
+                <code class="text-primary">{{${v.key}}}</code>
+                <br>
+                <small class="text-muted">${v.values.join(', ')}</small>
+              </div>
+            `).join('');
           }
         } catch (error) {
-          console.error('Erro ao carregar mensagem da categoria:', error);
+          console.error('Erro ao carregar template:', error);
         }
       } else {
-        messageTextarea.value = '';
-        messageTextarea.dispatchEvent(new Event('input'));
+        variablesInfo.style.display = 'none';
+        variablesList.innerHTML = '';
       }
     });
   }
@@ -686,83 +709,94 @@ async function loadGroupsForSession(sessionName) {
 
 async function handleSchedulerSubmit(e) {
   e.preventDefault();
-  
+
   const formData = new FormData(e.target);
   const session = formData.get('session');
   const destination = formData.get('destination');
-  const message = formData.get('message');
+  let message = formData.get('message');
   const datetime = formData.get('datetime');
   const type = formData.get('type');
   const interval = formData.get('interval');
-  const category = formData.get('category');
-  
-  // Coletar grupos selecionados
+  const templateId = formData.get('template');
+
   const selectedGroups = Array.from(document.querySelectorAll('#scheduler-groups input[type="checkbox"]:checked'))
     .map(cb => cb.value);
-  
-  // Validações
+
   if (!session) {
     showError('Selecione uma sessão');
     return;
   }
-  
+
   if (!destination && selectedGroups.length === 0) {
     showError('Informe um destino ou selecione grupos');
     return;
   }
-  
-  if (!message && !category) {
-    showError('Digite uma mensagem ou selecione uma categoria');
+
+  if (!message) {
+    showError('Digite uma mensagem');
     return;
   }
-  
+
   if (!datetime) {
     showError('Selecione data e hora');
     return;
   }
-  
+
   const sendAt = new Date(datetime);
   if (sendAt < new Date()) {
     showError('Data/hora deve ser no futuro');
     return;
   }
-  
+
   try {
     showLoading(true);
-    
-    // Determinar destinos
+
     const destinations = destination ? [destination] : selectedGroups;
-    
-    // Criar agendamentos
+
+    let templateVariables = null;
+    if (templateId) {
+      const templateResponse = await fetch(`/api/templates/${templateId}`);
+      const templateData = await templateResponse.json();
+      templateVariables = templateData.template?.variables || null;
+    }
+
     for (const dest of destinations) {
-      const response = await fetch('/api/agendamentos', {
+      let finalMessage = message;
+
+      if (templateVariables) {
+        templateVariables.forEach(variable => {
+          const randomValue = variable.values[Math.floor(Math.random() * variable.values.length)];
+          const regex = new RegExp(`{{${variable.key}}}`, 'g');
+          finalMessage = finalMessage.replace(regex, randomValue);
+        });
+      }
+
+      const response = await fetch('/api/schedules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessao: session,
           destino: dest,
-          mensagem: message,
+          mensagem: finalMessage,
           enviarEm: sendAt.toISOString(),
           tipoAgendamento: type,
-          intervaloDias: type === 'recorrente' ? parseInt(interval) : null,
-          categoriaMensagem: category || null
+          intervaloDias: type === 'recorrente' ? parseInt(interval) : null
         })
       });
-      
+
       const data = await response.json();
       if (!data.success) {
         throw new Error(data.error || 'Erro ao criar agendamento');
       }
     }
-    
+
     showSuccess(`${destinations.length} agendamento(s) criado(s) com sucesso!`);
     clearSchedulerForm();
-    
-    // Atualizar dashboard se estiver visível
+
     if (currentSection === 'dashboard') {
       setTimeout(() => loadDashboard(), 1000);
     }
-    
+
   } catch (error) {
     console.error('Erro ao criar agendamento:', error);
     showError(`Erro ao criar agendamento: ${error.message}`);
@@ -1629,7 +1663,7 @@ async function testWebhook() {
   try {
     const response = await fetch('/api/admin/test-webhook', { method: 'POST' });
     const data = await response.json();
-    
+
     if (response.ok) {
       showSuccess('Webhook testado com sucesso!');
     } else {
@@ -1637,5 +1671,312 @@ async function testWebhook() {
     }
   } catch (error) {
     showError('Erro ao testar webhook');
+  }
+}
+
+// Templates de Variáveis
+async function loadTemplates() {
+  const container = document.getElementById('content-container');
+
+  try {
+    showLoading(true);
+
+    const response = await fetch('/api/templates');
+    const data = await response.json();
+
+    container.innerHTML = `
+      <div class="row">
+        <div class="col-lg-8">
+          <div class="card shadow">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+              <h5 class="mb-0 d-flex align-items-center">
+                <i class="bi bi-file-text me-2 text-primary"></i>
+                Templates de Variáveis
+              </h5>
+              <button class="btn btn-success btn-sm" onclick="showTemplateForm()">
+                <i class="bi bi-plus"></i> Novo Template
+              </button>
+            </div>
+            <div class="card-body">
+              <div id="templates-list">
+                ${renderTemplatesList(data.templates || [])}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <div class="card shadow" id="template-form-card" style="display: none;">
+            <div class="card-header bg-white">
+              <h6 class="mb-0" id="template-form-title">Novo Template</h6>
+            </div>
+            <div class="card-body">
+              <form id="template-form">
+                <input type="hidden" id="template-id" value="">
+
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">Nome do Template</label>
+                  <input type="text" id="template-name" class="form-control" required
+                         placeholder="Ex: cidades_sc">
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">Variáveis</label>
+                  <div id="variables-container">
+                    <!-- Variáveis serão adicionadas aqui -->
+                  </div>
+                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="addVariableField()">
+                    <i class="bi bi-plus"></i> Adicionar Variável
+                  </button>
+                </div>
+
+                <div class="d-flex gap-2">
+                  <button type="submit" class="btn btn-success btn-sm">
+                    <i class="bi bi-check"></i> Salvar
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="hideTemplateForm()">
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="card shadow">
+            <div class="card-header bg-white">
+              <h6 class="mb-0">Como usar</h6>
+            </div>
+            <div class="card-body">
+              <p class="small mb-2">Templates permitem criar variáveis dinâmicas para suas mensagens.</p>
+              <ul class="small mb-0">
+                <li class="mb-2">Crie variáveis com múltiplos valores</li>
+                <li class="mb-2">Use <code>{{nome_variavel}}</code> nas mensagens</li>
+                <li class="mb-2">Valores são escolhidos aleatoriamente</li>
+                <li>Cada grupo recebe um valor diferente</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('template-form').addEventListener('submit', saveTemplate);
+
+  } catch (error) {
+    container.innerHTML = `<div class="alert alert-danger">Erro ao carregar templates: ${error.message}</div>`;
+  } finally {
+    showLoading(false);
+  }
+}
+
+function renderTemplatesList(templates) {
+  if (!templates || templates.length === 0) {
+    return `
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        Nenhum template criado ainda. Clique em "Novo Template" para começar.
+      </div>
+    `;
+  }
+
+  return templates.map(template => `
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="flex-grow-1">
+            <h6 class="mb-2">
+              <i class="bi bi-file-text text-primary me-2"></i>
+              ${template.name}
+            </h6>
+            <div class="mb-2">
+              ${template.variables.map(v => `
+                <div class="mb-2">
+                  <strong>{{${v.key}}}</strong>:
+                  <span class="badge bg-light text-dark ms-1">${v.values.join(', ')}</span>
+                </div>
+              `).join('')}
+            </div>
+            <small class="text-muted">
+              Criado em ${new Date(template.created_at).toLocaleString('pt-BR')}
+            </small>
+          </div>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary" onclick='editTemplate(${JSON.stringify(template)})'>
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-outline-danger" onclick="deleteTemplate(${template.id})">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showTemplateForm() {
+  document.getElementById('template-form-card').style.display = 'block';
+  document.getElementById('template-form-title').textContent = 'Novo Template';
+  document.getElementById('template-id').value = '';
+  document.getElementById('template-name').value = '';
+  document.getElementById('variables-container').innerHTML = '';
+  addVariableField();
+}
+
+function hideTemplateForm() {
+  document.getElementById('template-form-card').style.display = 'none';
+  document.getElementById('template-form').reset();
+}
+
+function addVariableField(key = '', values = []) {
+  const container = document.getElementById('variables-container');
+  const id = Date.now();
+
+  const variableDiv = document.createElement('div');
+  variableDiv.className = 'card mb-2';
+  variableDiv.id = `variable-${id}`;
+  variableDiv.innerHTML = `
+    <div class="card-body p-2">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <label class="small fw-semibold mb-0">Nome da Variável</label>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeVariableField(${id})">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+      <input type="text" class="form-control form-control-sm mb-2 variable-key"
+             value="${key}" placeholder="Ex: cidade" required>
+
+      <label class="small fw-semibold">Valores (um por linha)</label>
+      <div id="values-${id}">
+        ${values.length > 0 ? values.map((v, i) => `
+          <div class="input-group input-group-sm mb-1">
+            <input type="text" class="form-control variable-value" value="${v}" required>
+            <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+        `).join('') : `
+          <div class="input-group input-group-sm mb-1">
+            <input type="text" class="form-control variable-value" placeholder="Valor 1" required>
+            <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+        `}
+      </div>
+      <button type="button" class="btn btn-outline-primary btn-sm mt-1"
+              onclick="addValueField(${id})">
+        <i class="bi bi-plus"></i> Adicionar Valor
+      </button>
+    </div>
+  `;
+
+  container.appendChild(variableDiv);
+}
+
+function addValueField(variableId) {
+  const valuesContainer = document.getElementById(`values-${variableId}`);
+  const valueDiv = document.createElement('div');
+  valueDiv.className = 'input-group input-group-sm mb-1';
+  valueDiv.innerHTML = `
+    <input type="text" class="form-control variable-value" placeholder="Novo valor" required>
+    <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">
+      <i class="bi bi-x"></i>
+    </button>
+  `;
+  valuesContainer.appendChild(valueDiv);
+}
+
+function removeVariableField(id) {
+  const element = document.getElementById(`variable-${id}`);
+  if (element) {
+    element.remove();
+  }
+}
+
+function editTemplate(template) {
+  document.getElementById('template-form-card').style.display = 'block';
+  document.getElementById('template-form-title').textContent = 'Editar Template';
+  document.getElementById('template-id').value = template.id;
+  document.getElementById('template-name').value = template.name;
+
+  document.getElementById('variables-container').innerHTML = '';
+
+  template.variables.forEach(variable => {
+    addVariableField(variable.key, variable.values);
+  });
+}
+
+async function saveTemplate(e) {
+  e.preventDefault();
+
+  try {
+    const templateId = document.getElementById('template-id').value;
+    const templateName = document.getElementById('template-name').value;
+
+    const variables = [];
+    const variableCards = document.querySelectorAll('#variables-container .card');
+
+    variableCards.forEach(card => {
+      const key = card.querySelector('.variable-key').value.trim();
+      const valueInputs = card.querySelectorAll('.variable-value');
+      const values = Array.from(valueInputs)
+        .map(input => input.value.trim())
+        .filter(v => v !== '');
+
+      if (key && values.length > 0) {
+        variables.push({ key, values });
+      }
+    });
+
+    if (variables.length === 0) {
+      showError('Adicione pelo menos uma variável com valores');
+      return;
+    }
+
+    const url = templateId ? `/api/templates/${templateId}` : '/api/templates';
+    const method = templateId ? 'PUT' : 'POST';
+
+    const response = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: templateName,
+        variables
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      showSuccess(templateId ? 'Template atualizado!' : 'Template criado!');
+      hideTemplateForm();
+      loadTemplates();
+    } else {
+      showError(data.error || 'Erro ao salvar template');
+    }
+
+  } catch (error) {
+    showError('Erro ao salvar template: ' + error.message);
+  }
+}
+
+async function deleteTemplate(id) {
+  if (!confirm('Tem certeza que deseja deletar este template?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/templates/${id}`, { method: 'DELETE' });
+
+    if (response.ok) {
+      showSuccess('Template deletado com sucesso!');
+      loadTemplates();
+    } else {
+      const data = await response.json();
+      showError(data.error || 'Erro ao deletar template');
+    }
+  } catch (error) {
+    showError('Erro ao deletar template: ' + error.message);
   }
 }

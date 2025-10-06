@@ -28,9 +28,11 @@ app.use(session({
 // Importar rotas
 const adminRoutes = require('../routes/admin');
 const apiRoutes = require('../routes/api');
+const templatesRoutes = require('../routes/templates');
 
 // Rotas da API (devem vir antes do static para não serem interceptadas)
 app.use('/api/admin', adminRoutes);
+app.use('/api/templates', templatesRoutes);
 app.use('/api', apiRoutes);
 
 // Rota principal - redirecionar para login ou dashboard
