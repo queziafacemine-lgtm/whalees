@@ -1,0 +1,17 @@
+{
+  "cidade": "São Paulo",
+  "regiao": "SP",
+  "url": "https://empregosjoinville.com.br/vagas-em-sao-paulo/",
+  "grupos": ["Empregos SP", "Divulgação SP"],
+  "cargos": [
+    "Auxiliar de Produção",
+    "Vendedor",
+    "Recepcionista",
+    "Operador de Caixa",
+    "Motorista"
+  ],
+  "mensagens": [
+    "📌 <b>Vagas {{data_hoje}}</b> - {{cidade}}\nConfira {{quantidade}} oportunidades para {{primeiro_cargo}}, {{ultimos_cargos}} e mais!\n👉 Acesse: {{url_site}}",
+    "📢 <b>Novas Vagas {{data_hoje}}</b> em {{cidade}} ({{regiao}})\nMais de {{quantidade}} vagas abertas!\nVeja: {{url_site}}"
+  ]
+}

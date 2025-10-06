@@ -1,0 +1,342 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  background: #f9f9f9;
+}
+
+h1 {
+  color: #25d366;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+#basedetudo {
+  background: #fff;
+  width: 1280px;
+  border: 1px solid #ddd;
+  padding: 30px 40px;
+  border-radius: 10px;
+  margin: 30px auto;
+  box-shadow: 0px 0px 12px rgba(0, 0, 0, 0.05);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th,
+td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+th {
+  background-color: #25d366;
+  color: white;
+}
+
+/* Grupos e mensagem 50% cada com min-height */
+#grupos-container,
+#mensagem {
+  min-height: 200px;
+}
+
+#grupos-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px 10px;
+  max-height: 180px;
+  overflow-y: auto;
+  font-size: 11px;
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fafafa;
+  margin-bottom: 15px;
+}
+
+#grupos-container label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  margin: 5px 5px 0px 5px;
+}
+
+#grupos-container input[type="checkbox"] {
+  margin-right: 6px;
+  width: 15px;
+  height: 15px;
+}
+
+.grupo-item {
+  display: flex;
+  align-items: center;
+  background: #f0f0f0;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  border: 1px solid #ccc;
+}
+
+.grupo-item input[type="checkbox"] {
+  margin-right: 6px;
+}
+
+/* Container dos campos em linha */
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+/* Primeira linha: Sessão e Destino - 50% */
+.form-row:nth-of-type(1) .form-group {
+  flex: 1 1 48%;
+}
+
+/* Segunda linha: Tipo, Categoria, EnviarEm, X Dias - 20% cada */
+.form-row:nth-of-type(2) .form-group {
+  flex: 1 1 23%;
+  min-width: 180px;
+}
+
+/* Terceira linha: Grupos e Mensagem - 50% cada */
+.form-row:nth-of-type(3) .form-group {
+  flex: 1 1 48%;
+}
+
+/* Cada grupo de label + input/select */
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Labels */
+label {
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+/* Inputs e selects */
+input[type="text"],
+input[type="datetime-local"],
+input[type="number"],
+select,
+textarea {
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-family: inherit;
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  transition: border-color 0.3s ease;
+  margin-bottom: 10px;
+}
+
+input[type="text"]:focus,
+input[type="datetime-local"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  border-color: #25d366;
+  outline: none;
+}
+
+textarea {
+  min-height: 100px;
+}
+
+/* Botões */
+button {
+  background-color: #25d366;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 18px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin: 10px;
+}
+
+button:hover:not(:disabled) {
+  background-color: #1da851;
+}
+
+#btnAgendar,
+#btn-cancelar-edicao {
+  display: inline-block;
+}
+
+#btn-cancelar-edicao {
+  background-color: #ccc;
+  color: #333;
+}
+
+#btn-cancelar-edicao:hover {
+  background-color: #bbb;
+}
+
+/* Centralização dos botões */
+#form-agendamento {
+  text-align: center;
+}
+
+/* Tabela */
+#tabela-agendamentos {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+#tabela-agendamentos th,
+#tabela-agendamentos td {
+  padding: 10px;
+  border: 1px solid #ddd;
+  text-align: left;
+  vertical-align: middle;
+  font-size: 0.9rem;
+  max-width: 150px;
+  word-break: break-word;
+}
+
+#tabela-agendamentos th {
+  background-color: #25d366;
+  font-weight: 700;
+}
+
+/* Status pendente/enviado */
+.pendente {
+  color: #e07b00;
+  font-weight: 700;
+}
+
+.enviado {
+  color: #0b8a00;
+  font-weight: 700;
+}
+
+/* Container de logs */
+.logs-box {
+  max-height: 150px;
+  overflow-y: auto;
+  background-color: #fafafa;
+  border: 1px solid #ddd;
+  padding: 10px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #555;
+  white-space: pre-wrap;
+  margin-bottom: 20px;
+}
+
+#logs {
+  margin-top: 30px;
+  background: #eee;
+  padding: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: monospace;
+  white-space: pre-wrap;
+  border-radius: 5px;
+}
+
+/* Botões de ações */
+.btn-editar,
+.btn-remover {
+  padding: 5px 10px;
+  margin: 2px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  color: white;
+}
+
+.btn-editar {
+  background-color: #2196F3;
+}
+
+.btn-editar:hover {
+  background-color: #0b7dda;
+}
+
+.btn-remover {
+  background-color: #f44336;
+}
+
+.btn-remover:hover {
+  background-color: #c62828;
+}
+
+/* Modal */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 99999 !important;
+  padding-top: 60px;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+  background-color: #fff;
+  margin: auto;
+  padding: 15px;
+  border-radius: 6px;
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+.fechar-modal {
+  color: #aaa;
+  float: right;
+  font-size: 26px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.fechar-modal:hover {
+  color: #25d366;
+}
+
+/* Botão lupa visualização */
+.btn-ver-msg {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  transition: color 0.2s ease;
+}
+
+.btn-ver-msg:hover {
+  color: #25d366;
+}
+
+/* Responsividade */
+@media (max-width: 900px) {
+  .form-group {
+    flex: 1 1 100% !important;
+    min-width: auto;
+  }
+
+  #btnAgendar,
+  #btn-cancelar-edicao {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+}

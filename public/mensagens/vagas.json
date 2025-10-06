@@ -1,0 +1,13 @@
+{
+  "mensagens": [
+    "Hoje, {{data_hoje}}, temos {{quantidade}} vagas para {{primeiro_cargo}} em {{cidade}}. Cadastre-se já!",
+    "Últimas vagas para {{ultimos_cargos}} na região de {{regiao}} – acesse: {{url_site}}"
+  ],
+  "variaveis": {
+    "cidade": "Joinville",
+    "regiao": "Zona Sul",
+    "primeiro_cargo": "Repositor",
+    "ultimos_cargos": "Operador de Caixa, Estoquista, Fiscal de Loja",
+    "url_site": "https://empregosjoinville.com"
+  }
+}

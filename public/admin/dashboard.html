@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - WhatsApp Bot Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <!-- QR Code Library -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <style>
+    .sidebar {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+    .sidebar .nav-link {
+      color: rgba(255,255,255,0.8);
+      border-radius: 0.5rem;
+      margin: 0.2rem 0;
+      transition: all 0.3s ease;
+    }
+    .sidebar .nav-link:hover,
+    .sidebar .nav-link.active {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      transform: translateX(5px);
+    }
+    .content-area {
+      background: #f8f9fa;
+      min-height: 100vh;
+    }
+    .card-stat {
+      border-left: 4px solid #007bff;
+      transition: transform 0.2s ease;
+    }
+    .card-stat:hover {
+      transform: translateY(-2px);
+    }
+    .logo-section {
+      background: rgba(255,255,255,0.1);
+      border-radius: 1rem;
+      margin-bottom: 2rem;
+    }
+    .border-left-primary { border-left: 4px solid #007bff !important; }
+    .border-left-success { border-left: 4px solid #28a745 !important; }
+    .border-left-warning { border-left: 4px solid #ffc107 !important; }
+    .border-left-danger { border-left: 4px solid #dc3545 !important; }
+    .border-left-info { border-left: 4px solid #17a2b8 !important; }
+    .border-left-secondary { border-left: 4px solid #6c757d !important; }
+    
+    .qr-code-container {
+      animation: fadeIn 0.5s ease-in;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .whatsapp-green {
+      background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+      border: none;
+      color: white;
+    }
+    
+    .whatsapp-green:hover {
+      background: linear-gradient(135deg, #128c7e 0%, #25d366 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(37, 211, 102, 0.3);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Sidebar -->
+      <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+        <div class="position-sticky pt-3">
+          <div class="logo-section text-center p-3 mb-4">
+            <h4 class="text-white mb-1">📱 WhatsApp Bot</h4>
+            <small class="text-white-50">Painel Unificado</small>
+          </div>
+          
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link active" href="#" data-section="dashboard">
+                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-section="sessions">
+                <i class="bi bi-phone me-2"></i> Sessões WhatsApp
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-section="scheduler">
+                <i class="bi bi-calendar-plus me-2"></i> Agendador
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-section="schedules">
+                <i class="bi bi-calendar-event me-2"></i> Agendamentos
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-section="logs">
+                <i class="bi bi-list-ul me-2"></i> Logs
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-section="settings">
+                <i class="bi bi-gear me-2"></i> Configurações
+              </a>
+            </li>
+          </ul>
+          
+          <hr class="text-white my-4">
+          
+          <!-- Informações do Sistema -->
+          <div class="mb-3">
+            <div class="text-white-50 small mb-2">Sistema Integrado</div>
+            <div class="d-flex align-items-center text-white-50 small">
+              <i class="bi bi-circle-fill text-success me-2" style="font-size: 0.5rem;"></i>
+              Tudo em um só lugar
+            </div>
+          </div>
+          
+          <div class="dropdown">
+            <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+              <i class="bi bi-person-circle me-2"></i>
+              <span id="username-display">Admin</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
+              <li><a class="dropdown-item" href="#" onclick="logout()">
+                <i class="bi bi-box-arrow-right me-2"></i> Sair
+              </a></li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Main content -->
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 content-area">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2" id="page-title">Dashboard</h1>
+          <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshData()">
+                <i class="bi bi-arrow-clockwise"></i> Atualizar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="loading" class="text-center py-4" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p class="mt-2">Carregando dados...</p>
+        </div>
+
+        <!-- Content Container -->
+        <div id="content-container">
+          <!-- Dashboard content será carregado aqui -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal para QR Code -->
+  <div class="modal fade" id="qrModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-qr-code me-2"></i>
+            Conectar WhatsApp
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body text-center">
+          <div id="qr-code-display" class="mb-3">
+            <!-- QR Code será inserido aqui -->
+          </div>
+          <p class="text-muted">
+            Abra o WhatsApp no seu celular, vá em <strong>Dispositivos conectados</strong> 
+            e escaneie este código QR
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para Mensagem Completa -->
+  <div class="modal fade" id="messageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Mensagem Completa</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <pre id="message-content" class="bg-light p-3 rounded"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/admin/js/dashboard.js"></script>
+</body>
+</html>
